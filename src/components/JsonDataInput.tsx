@@ -10,11 +10,9 @@ interface JsonDataInputProps {
 
 export default function JsonDataInput({ onDataLoaded, currentData }: JsonDataInputProps) {
   const userFormatData = useMemo(() => {
-    const levels = currentData.levels.reduce((acc, level) => {
-      acc[`level_${level.level}`] = level.data;
-      return acc;
-    }, {} as Record<string, string[]>);
-    return { levels };
+    return {
+      levels: currentData.levels.map(level => level.data)
+    };
   }, [currentData]);
 
   const [jsonInput, setJsonInput] = useState(JSON.stringify(userFormatData, null, 2));
@@ -24,24 +22,15 @@ export default function JsonDataInput({ onDataLoaded, currentData }: JsonDataInp
     try {
       const parsed = JSON.parse(jsonInput);
 
-      if (!parsed.levels || typeof parsed.levels !== 'object' || Array.isArray(parsed.levels)) {
-        throw new Error('Invalid format. "levels" must be an object containing level data.');
+      if (!parsed.levels || !Array.isArray(parsed.levels)) {
+        throw new Error('Invalid format. "levels" must be an array of arrays.');
       }
 
-      const levels: Level[] = Object.entries(parsed.levels).map(([levelKey, data]) => {
-        if (!levelKey.startsWith('level_')) {
-          throw new Error(`Invalid level key: "${levelKey}". Keys must start with "level_".`);
-        }
+      const levels: Level[] = parsed.levels.map((data: any, index: number) => {
         if (!Array.isArray(data)) {
-          throw new Error(`Invalid data for level "${levelKey}". Expected an array of strings.`);
+          throw new Error(`Invalid data for level ${index + 1}. Expected an array of strings.`);
         }
-        
-        const levelNum = parseInt(levelKey.replace('level_', ''), 10);
-        if (isNaN(levelNum)) {
-          throw new Error(`Invalid level number in key: "${levelKey}".`);
-        }
-
-        return { level: levelNum, data: data.map(String) };
+        return { level: index + 1, data: data.map(String) };
       });
 
       onDataLoaded({ levels });
@@ -56,7 +45,7 @@ export default function JsonDataInput({ onDataLoaded, currentData }: JsonDataInp
       <Textarea
         value={jsonInput}
         onChange={(e) => setJsonInput(e.target.value)}
-        placeholder={JSON.stringify({ levels: { level_1: ["item1", "item2"] } }, null, 2)}
+        placeholder={JSON.stringify({ levels: [["item1", "item2"], ["itemA", "itemB"]] }, null, 2)}
         className="font-mono text-sm min-h-[200px] resize-none"
       />
       

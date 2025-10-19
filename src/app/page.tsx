@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import SpinWheel from '@/components/SpinWheel'
 import LevelSelector from '@/components/LevelSelector'
 import JsonDataInput from '@/components/JsonDataInput'
@@ -51,12 +51,35 @@ const initialData: SpinWheelData = {
 };
 
 export default function Home() {
-  const [currentLevel, setCurrentLevel] = useState(1)
+  const [selectedLevels, setSelectedLevels] = useState([1])
   const [spinWheelData, setSpinWheelData] = useState<SpinWheelData>(initialData);
   const [winner, setWinner] = useState<string | null>(null)
   const [winners, setWinners] = useState<string[]>([]);
+  const [isClient, setIsClient] = useState(false)
 
-  const currentLevelData = spinWheelData.levels.find(l => l.level === currentLevel)?.data || [];
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  const currentLevelData = spinWheelData.levels
+    .filter(l => selectedLevels.includes(l.level))
+    .flatMap(l => l.data);
+
+  const handleLevelChange = (level: number) => {
+    setSelectedLevels(prevSelected =>
+      prevSelected.includes(level)
+        ? prevSelected.filter(l => l !== level)
+        : [...prevSelected, level]
+    );
+  };
+
+  const handleSelectAll = () => {
+    setSelectedLevels(spinWheelData.levels.map(l => l.level));
+  };
+
+  const handleClearAll = () => {
+    setSelectedLevels([]);
+  };
 
   const handleSpinComplete = (result: string) => {
     setWinner(result);
@@ -83,7 +106,7 @@ export default function Home() {
         </div>
 
         {/* Main Content */}
-        <div className="grid lg:grid-cols-[1fr_400px] gap-8 max-w-7xl mx-auto">
+        {isClient && <div className="grid lg:grid-cols-[1fr_400px] gap-8 max-w-7xl mx-auto">
           {/* Left Column - Wheel */}
           <div className="flex flex-col items-center justify-center">
             <SpinWheel
@@ -100,7 +123,7 @@ export default function Home() {
             <Card className="p-6 bg-chart-1/10 border-chart-1/20 shadow-xl">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-1">Current Level</p>
-                <p className="text-4xl font-bold text-primary">Level {currentLevel}</p>
+                <p className="text-4xl font-bold text-primary">Level {selectedLevels.join(', ')}</p>
                 <p className="text-sm text-muted-foreground mt-2">
                   {currentLevelData.length} segments
                 </p>
@@ -110,8 +133,10 @@ export default function Home() {
             {/* Level Selector */}
             <LevelSelector
               levels={levels}
-              currentLevel={currentLevel}
-              onLevelChange={setCurrentLevel}
+              selectedLevels={selectedLevels}
+              onLevelChange={handleLevelChange}
+              onSelectAll={handleSelectAll}
+              onClearAll={handleClearAll}
             />
 
             {/* JSON Data Input */}
@@ -130,7 +155,7 @@ export default function Home() {
               </DialogContent>
             </Dialog>
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   )
