@@ -4,19 +4,70 @@ import { useState } from 'react'
 import SpinWheel from '@/components/SpinWheel'
 import LevelSelector from '@/components/LevelSelector'
 import JsonDataInput from '@/components/JsonDataInput'
-import { Card } from '@/components/ui/card'
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { WinnerPopup } from "@/components/ui/WinnerPopup";
+import { PermanentWinnerDisplay } from "@/components/ui/PermanentWinnerDisplay";
 
-// Sample data matching the new format
-const initialLevel1Data = ["1", "2", "3"]
-const initialLevel2Data = ["4", "5", "6"]
+export interface Level {
+  level: number;
+  data: string[];
+}
+
+export interface SpinWheelData {
+  levels: Level[];
+}
+
+const initialData: SpinWheelData = {
+  levels: [
+    {
+      level: 1,
+      data: [
+        "sample1",
+        "sample2",
+        "sample3",
+        "sample4",
+        "sample5",
+      ]
+    },
+    {
+      level: 2,
+      data: [
+        "sampleA",
+        "sampleB",
+        "sampleC",
+        "sampleD",
+        "sampleE",
+      ]
+    }
+  ]
+};
 
 export default function Home() {
   const [currentLevel, setCurrentLevel] = useState(1)
-  const [level1Data, setLevel1Data] = useState(initialLevel1Data)
-  const [level2Data, setLevel2Data] = useState(initialLevel2Data)
+  const [spinWheelData, setSpinWheelData] = useState<SpinWheelData>(initialData);
+  const [winner, setWinner] = useState<string | null>(null)
+  const [winners, setWinners] = useState<string[]>([]);
 
-  const currentData = currentLevel === 1 ? level1Data : level2Data
-  const setCurrentData = currentLevel === 1 ? setLevel1Data : setLevel2Data
+  const currentLevelData = spinWheelData.levels.find(l => l.level === currentLevel)?.data || [];
+
+  const handleSpinComplete = (result: string) => {
+    setWinner(result);
+    setWinners(prevWinners => [...prevWinners, result]);
+  }
+
+  const handleClosePopup = () => {
+    setWinner(null);
+  }
+
+  const levels = spinWheelData.levels.map(l => l.level);
 
   return (
     <div className="min-h-screen bg-background dark">
@@ -35,10 +86,12 @@ export default function Home() {
         <div className="grid lg:grid-cols-[1fr_400px] gap-8 max-w-7xl mx-auto">
           {/* Left Column - Wheel */}
           <div className="flex flex-col items-center justify-center">
-            <SpinWheel 
-              segments={currentData}
-              onSpinComplete={(result) => console.log('Won:', result)}
+            <SpinWheel
+              segments={currentLevelData}
+              onSpinComplete={handleSpinComplete}
             />
+            <WinnerPopup winner={winner} onClose={handleClosePopup} />
+            <PermanentWinnerDisplay winners={winners} />
           </div>
 
           {/* Right Column - Controls */}
@@ -49,23 +102,33 @@ export default function Home() {
                 <p className="text-sm text-muted-foreground mb-1">Current Level</p>
                 <p className="text-4xl font-bold text-primary">Level {currentLevel}</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {currentData.length} segments
+                  {currentLevelData.length} segments
                 </p>
               </div>
             </Card>
 
             {/* Level Selector */}
-            <LevelSelector 
+            <LevelSelector
+              levels={levels}
               currentLevel={currentLevel}
               onLevelChange={setCurrentLevel}
             />
 
             {/* JSON Data Input */}
-            <JsonDataInput 
-              levelNumber={currentLevel}
-              onDataLoaded={setCurrentData}
-              currentData={currentData}
-            />
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full">Load/Edit Data</Button>
+              </DialogTrigger>
+              <DialogContent className="max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Load JSON Data</DialogTitle>
+                </DialogHeader>
+                <JsonDataInput
+                  onDataLoaded={setSpinWheelData}
+                  currentData={spinWheelData}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>

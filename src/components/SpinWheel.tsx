@@ -56,7 +56,27 @@ export default function SpinWheel({ segments, onSpinComplete }: SpinWheelProps) 
     onSpinComplete?.(winner)
   }
 
-  const segmentAngle = 360 / segments.length
+  if (!Array.isArray(segments) || segments.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-8 w-full max-w-2xl mx-auto">
+        <div className="relative w-[420px] h-[420px] md:w-[520px] md:h-[520px] p-4 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <p className="text-lg">No segments to display.</p>
+            <p>Load data to start.</p>
+          </div>
+        </div>
+        <Button
+          size="lg"
+          className="text-xl px-16 py-8 shadow-2xl font-bold tracking-wide"
+          disabled
+        >
+          SPIN
+        </Button>
+      </div>
+    );
+  }
+
+  const segmentAngle = 360 / segments.length;
 
   return (
     <div className="flex flex-col items-center gap-8 w-full max-w-2xl mx-auto">

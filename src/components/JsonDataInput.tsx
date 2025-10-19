@@ -1,95 +1,78 @@
-"use client"
-
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
+import { useState, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { SpinWheelData, Level } from '@/app/page';
 
 interface JsonDataInputProps {
-  levelNumber: number
-  onDataLoaded: (data: string[]) => void
-  currentData: string[]
+  onDataLoaded: (data: SpinWheelData) => void;
+  currentData: SpinWheelData;
 }
 
-export default function JsonDataInput({ levelNumber, onDataLoaded, currentData }: JsonDataInputProps) {
-  const [jsonInput, setJsonInput] = useState('')
-  const [error, setError] = useState('')
+export default function JsonDataInput({ onDataLoaded, currentData }: JsonDataInputProps) {
+  const userFormatData = useMemo(() => {
+    const levels = currentData.levels.reduce((acc, level) => {
+      acc[`level_${level.level}`] = level.data;
+      return acc;
+    }, {} as Record<string, string[]>);
+    return { levels };
+  }, [currentData]);
+
+  const [jsonInput, setJsonInput] = useState(JSON.stringify(userFormatData, null, 2));
+  const [error, setError] = useState('');
 
   const handleLoadData = () => {
     try {
-      const parsed = JSON.parse(jsonInput)
-      
-      // Support both formats:
-      // 1. New format: { "levels": { "level_1": [...], "level_2": [...] } }
-      // 2. Simple array: ["item1", "item2", ...]
-      
-      let segments: string[]
-      
-      if (parsed.levels && parsed.levels[`level_${levelNumber}`]) {
-        segments = parsed.levels[`level_${levelNumber}`]
-      } else if (Array.isArray(parsed)) {
-        segments = parsed
-      } else {
-        throw new Error('Invalid format. Expected array or levels object.')
+      const parsed = JSON.parse(jsonInput);
+
+      if (!parsed.levels || typeof parsed.levels !== 'object' || Array.isArray(parsed.levels)) {
+        throw new Error('Invalid format. "levels" must be an object containing level data.');
       }
 
-      if (!Array.isArray(segments) || segments.length === 0) {
-        throw new Error('Data must be a non-empty array of strings')
-      }
+      const levels: Level[] = Object.entries(parsed.levels).map(([levelKey, data]) => {
+        if (!levelKey.startsWith('level_')) {
+          throw new Error(`Invalid level key: "${levelKey}". Keys must start with "level_".`);
+        }
+        if (!Array.isArray(data)) {
+          throw new Error(`Invalid data for level "${levelKey}". Expected an array of strings.`);
+        }
+        
+        const levelNum = parseInt(levelKey.replace('level_', ''), 10);
+        if (isNaN(levelNum)) {
+          throw new Error(`Invalid level number in key: "${levelKey}".`);
+        }
 
-      onDataLoaded(segments)
-      setError('')
-      setJsonInput('')
+        return { level: levelNum, data: data.map(String) };
+      });
+
+      onDataLoaded({ levels });
+      setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid JSON format')
+      setError(err instanceof Error ? err.message : 'Invalid JSON format');
     }
-  }
-
-  const exampleJson = JSON.stringify({
-    levels: {
-      level_1: ["1", "2", "3"],
-      level_2: ["4", "5", "6"]
-    }
-  }, null, 2)
+  };
 
   return (
-    <Card className="shadow-lg border-primary/20">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span className="text-2xl">📝</span>
-          Load JSON Data
-        </CardTitle>
-        <CardDescription>
-          Paste your JSON data for Level {levelNumber}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Textarea
-          value={jsonInput}
-          onChange={(e) => setJsonInput(e.target.value)}
-          placeholder={exampleJson}
-          className="font-mono text-sm min-h-[200px] resize-none"
-        />
-        
-        {error && (
-          <div className="text-destructive text-sm bg-destructive/10 p-3 rounded-md">
-            {error}
-          </div>
-        )}
-
-        <Button 
-          onClick={handleLoadData}
-          className="w-full bg-primary hover:bg-primary/90"
-          disabled={!jsonInput.trim()}
-        >
-          Load Data for Level {levelNumber}
-        </Button>
-
-        <div className="text-xs text-muted-foreground space-y-1 bg-muted/50 p-3 rounded-md">
-          <p className="font-semibold">Current segments ({currentData.length}):</p>
-          <p className="break-words">{currentData.join(', ')}</p>
+    <div className="space-y-4">
+      <Textarea
+        value={jsonInput}
+        onChange={(e) => setJsonInput(e.target.value)}
+        placeholder={JSON.stringify({ levels: { level_1: ["item1", "item2"] } }, null, 2)}
+        className="font-mono text-sm min-h-[200px] resize-none"
+      />
+      
+      {error && (
+        <div className="text-destructive text-sm bg-destructive/10 p-3 rounded-md">
+          {error}
         </div>
-      </CardContent>
-    </Card>
-  )
+      )}
+
+      <Button 
+        onClick={handleLoadData}
+        className="w-full bg-primary hover:bg-primary/90"
+        disabled={!jsonInput.trim()}
+      >
+        Load Data
+      </Button>
+    </div>
+  );
 }
