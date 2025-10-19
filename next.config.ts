@@ -7,8 +7,8 @@ const nextConfig: NextConfig = {
   output: 'export',
 
   // These paths are crucial for GitHub Pages deployments
-  basePath: process.env.NODE_ENV === 'production' ? '/vunaq.github.io' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/vunaq.github.io/' : '',
+  basePath: process.env.NODE_ENV === 'production' ? '/spin-wheel-json-levels' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/spin-wheel-json-levels/' : '',
 
   images: {
     // This is the critical line to add
